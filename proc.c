@@ -1,4 +1,5 @@
 /*
+ *  $Id$
  *
  *  Copyright (c) 2004 Bonelli Nicola <awgn@antifork.org>
  *
