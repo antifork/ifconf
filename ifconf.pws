@@ -1,0 +1,35 @@
+
+[executer]
+RunInTerminal=true
+
+[Project State]
+clean before build=false
+
+[filenumbers]
+0=106
+1=89
+
+[filemarkers]
+0=88,
+1=
+
+[File View]
+filter.file.unmatch=*.so *.o *.a *.la
+filter.file.ignore.hidden=0
+filter.dir.ignore.hidden=0
+
+[filelist]
+0=/cvs/ifconf/ifconf.c
+1=/cvs/ifconf/netdev.c
+
+[Project Tree]
+0=0
+1=0:0
+
+[Symbol Tree]
+0=0
+1=2
+2=3
+
+[File Tree]
+0=0
