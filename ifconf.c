@@ -30,11 +30,14 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <err.h>
 #include <errno.h>
 #include <sysexits.h>
+#define _GNU_SOURCE
+#include <getopt.h>
 
 #define __KERNEL__
 #include <asm/types.h>
@@ -43,23 +46,28 @@
 
 #include <config.h>
 #include <typedef.h>
+#include <macro.h>
 
+static 
 const char usage_s[] = "\
 Usage:%s [options]                                               \n\
-   -a                   display all interfaces                   \n\
-   -v                   display the version and exit.            \n\
-   -h                   print this help.                         \n";
+   -a, --all            display all interfaces                   \n\
+   -v, --version        display the version and exit.            \n\
+   -h, --help           print this help.                         \n";
 
+static
+const char license[]="\n\
+Copyright (c) 2004 Nicola Bonelli <bonelli@antifork.org>.\n\
+This program is distributed in the hope that it will be useful,\n\
+but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\
+GNU General Public License for more details.";
 
-#ifndef __unused
-#define __unused        __attribute__((unused))
-#endif
-#ifndef __dead
-#define __dead          __attribute__((noreturn))
-#endif
-
-#define __INTERNAL__    "%d:%s() internal error",\
-                        __LINE__,__FUNCTION__
+static const struct option long_options[] = {
+	{"version", no_argument, NULL, 'v'},
+	{"all",     no_argument, NULL, 'S'},
+	{"help",    no_argument, NULL, 'h'},
+	{ NULL,     0          , NULL,  0 }};
 
 struct {
 	int	all;
@@ -98,7 +106,6 @@ usage()
 
 static char if_buffer[10240];
 
-#define BIT(i)	(1<<(i-1))
 
 const char *if_flag[]= {
 "UP", "BROADCAST", "DEBUG", "LOOPBACK", "PTP", "NOTRL", "RUNNING", "NOARP", 
@@ -154,11 +161,11 @@ if_browser()
                 /* FLAG */
                 {
                         int i,j=0;
-                        for (i=1;i<16;i++) {
-                                if ( ifru_flags & BIT(i) ) {
+                        for (i=1;i<16;i++) 
+                                if ( ifru_flags & BIT(i) ) 
                                         printf(j++ == 0 ? "\n\t%s " : "%s ", if_flag[i-1]);
-				}
-                        }	
+				
+                        
                 }
 
                 /* SIOCGIFHWADDR */
@@ -225,8 +232,8 @@ af_inet_end:
 		int_cnt = get_interrupt_counter((unsigned int)ifreq_io.ifr_ifru.ifru_map.irq, &int_cpu);
 
 		printf( ifreq_io.ifr_ifru.ifru_map.mem_start ? 
-				"\tbase_addr:%1$x memory:%2$x-%3$x irq:%4$d #cpu0=%5$d dma:%6$d port:%7$d\n " : 
-				"\tbase_addr:%1$x irq:%4$d #cpu%8$d=%5$d dma:%6$d port:%7$d\n " ,
+			"\tbase_addr:%1$x memory:%2$x-%3$x irq:%4$d #cpu0=%5$d dma:%6$d port:%7$d\n " : 
+			"\tbase_addr:%1$x irq:%4$d #cpu%8$d=%5$d dma:%6$d port:%7$d\n " ,
 			(unsigned int)ifreq_io.ifr_ifru.ifru_map.base_addr,
 			(unsigned int)ifreq_io.ifr_ifru.ifru_map.mem_start,
 			(unsigned int)ifreq_io.ifr_ifru.ifru_map.mem_end,
@@ -239,7 +246,7 @@ af_inet_end:
 		/* stats */
 
 		s = get_stats(ifreq_io.ifr_name);
-		printf("\tRX packets:%lu errors:%lu dropped:%lu overruns:%lu frame:%lu\n" \ 
+		printf("\tRX packets:%lu errors:%lu dropped:%lu overruns:%lu frame:%lu\n"
 		       "\tTx packets:%lu errors:%lu dropped:%lu overruns:%lu carrier:%lu\n",
 			s.rx_packets,
 			s.rx_errs,
@@ -270,7 +277,6 @@ __dead void the_function_after() __attribute__((destructor));
 __dead void
 the_function_after()
 {
-
   	/* reset Graphics Rendition */
         printf("\e[0m");
 	exit(0);
@@ -284,20 +290,23 @@ main(argc,argv)
 {
 	int i;
 
-
-        while ((i = getopt(argc, argv, "hva")) != EOF)
+	while ((i = getopt_long(argc, argv, "hva", long_options, 0)) != EOF)
                 switch (i) {
                         case 'h':
                                 usage();
                         case 'v':
-                                printf("%s\n",VERSION); exit(0);
+			        fprintf(stderr, "%s\n\nifconf %s\n", license, VERSION);
+                        	exit(0);
                         case 'a':
 				options.all=1 ;
 				break;
                         case '?': fatal(__INTERNAL__);
         }
-	
 
+	argc -= optind;
+	argv += optind;
+
+	signal(SIGINT,exit);	
 	if_browser();
 
 	return (0);

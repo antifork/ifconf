@@ -20,19 +20,19 @@
  */
 
 #include <stdio.h>
-
-#define PROC_INTERRUPT	"/proc/interrupts"
+#include <macro.h>
 
 static char *buf;
 static int buf_len;
-static int _cnt[8];
+static int cnt[8];
 
 int
 get_interrupt_counter(int i, int *cpu)
 {
 	FILE *f;
-	int _int;
+	int interrupt;
 	int j;
+	char *r;
 
 	j = 0;
 	*cpu = 0;
@@ -45,18 +45,25 @@ get_interrupt_counter(int i, int *cpu)
 		fatal("getline()");
 
 	while ( getline(&buf,&buf_len,f) != EOF ) {
-		sscanf(buf,"%d",&_int);
-		if (i != _int)
+		sscanf(buf,"%d",&interrupt);
+
+		if (i != interrupt)
 			continue;
 
-		sscanf(strchr(buf,':')+1,"%d %d %d %d %d %d %d %d",&_cnt[0], &_cnt[1], &_cnt[2], &_cnt[3],	
-								   &_cnt[4], &_cnt[5], &_cnt[6], &_cnt[7]);
-		while ( _cnt[j] == 0 )
+		r = strchr(buf,':');
+		if (r == NULL)
+			fatal(__INTERNAL__);
+
+		sscanf(	r+1, "%d %d %d %d %d %d %d %d",
+			&cnt[0], &cnt[1], &cnt[2], &cnt[3],	
+			&cnt[4], &cnt[5], &cnt[6], &cnt[7]);
+
+		while ( cnt[j] == 0 )
 			j++;
 
 		*cpu = j;
 	}
 out:
 	close (f);
-	return (_cnt[j]);
+	return (cnt[j]);
 }

@@ -19,14 +19,13 @@
  *
  */
 
-#define PROC_NET_DEV "/proc/net/dev"
-
 #include <net/if.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <config.h>
 #include <typedef.h>
+#include <macro.h>
 
 static char buf[512];
 static char ifname[IFNAMSIZ];
@@ -66,6 +65,7 @@ get_stats(char *ifn)
 	FILE *proc_net_dev;
 	stats_t ret;	
 	int i=0;
+	char *r;
 
 	proc_net_dev= fopen(PROC_NET_DEV,"r");
         if (proc_net_dev == NULL)
@@ -77,20 +77,25 @@ get_stats(char *ifn)
 	
         while ( (getline(&buff, &buff_len, proc_net_dev) ) != EOF ) {
                 sscanf(buf,"%[^:]",ifname);
+
 		if (strstr(ifname,ifn) == NULL)
 			continue;
+
+		r = strchr(buf,':');
+		if (r == NULL)
+			fatal(__INTERNAL__);
 		
-		sscanf(strchr(buf,':')+1, "%*lu %lu %lu %lu %lu %lu %*lu %*lu %*lu %lu %lu %lu %lu %lu", 
-						&ret.rx_packets,
-						&ret.rx_errs,
-						&ret.rx_drop,
-						&ret.rx_fifo,
-						&ret.rx_frame,
-						&ret.tx_packets,
-						&ret.tx_errs,
-						&ret.tx_drop,
-						&ret.tx_fifo,
-						&ret.tx_colls);
+		sscanf(r+1, "%*lu %lu %lu %lu %lu %lu %*lu %*lu %*lu %lu %lu %lu %lu %lu", 
+			&ret.rx_packets,
+			&ret.rx_errs,
+			&ret.rx_drop,
+			&ret.rx_fifo,
+			&ret.rx_frame,
+			&ret.tx_packets,
+			&ret.tx_errs,
+			&ret.tx_drop,
+			&ret.tx_fifo,
+			&ret.tx_colls);
         }
 	
 	return (ret);

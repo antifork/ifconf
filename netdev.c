@@ -59,16 +59,15 @@ ethernet_info(const char *ifname)
 	}
 
 	strncpy(ifr.ifr_name, ifname,IF_NAMESIZE);
-
 	free(info);
 
 	ifr.ifr_data = (__caddr_t) malloc(sizeof(struct ethtool_drvinfo));
-	info = (struct ethtool_drvinfo *) ifr.ifr_data; 
-
 	if (ifr.ifr_data == NULL) {
 		printf("malloc(): %s\n", strerror(errno));
 		return NULL;
 	}
+
+	info = (struct ethtool_drvinfo *) ifr.ifr_data;
 	strncpy(ifr.ifr_data, (char *) &req, sizeof(req));
 
 	if (ioctl(s, SIOCETHTOOL, &ifr) == -1) {
