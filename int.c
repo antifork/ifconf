@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <macro.h>
+#include <string.h>
 
 static char *buf;
 static int buf_len;
@@ -29,9 +30,8 @@ static int cnt[8];
 int
 get_interrupt_counter(int i, int *cpu)
 {
+	int interrupt; int j;
 	FILE *f;
-	int interrupt;
-	int j;
 	char *r;
 
 	j = 0;

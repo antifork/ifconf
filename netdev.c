@@ -39,6 +39,7 @@
 #include <sysexits.h>
 
 #include <config.h>
+#include <macro.h>
 
 /*
  * given the ifname, the function return a pointer to
@@ -205,7 +206,7 @@ mii_testlink(char *ifname)
 
 	/* set bold */
 	if ( (mii_reg[mii_bmsr] & MII_BMSR_LINK_VALID ) )
-		printf("\e[0;1m");
+		printf(SGR_bold);
 
         printf("link:");
 

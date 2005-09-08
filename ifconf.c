@@ -75,9 +75,11 @@ struct {
 
 
 /* prototype */
-struct ethtool_drvinfo *ethernet_info(const char *);
-char * get_ifname();
-stats_t get_stats(char *);
+extern struct ethtool_drvinfo *ethernet_info(const char *);
+extern char * get_ifname()  __attribute__ ((deprecated));
+extern char * get_ifname_new();
+
+extern stats_t *get_stats(char *);
 
 
 /* verr()/verrx() wrapper */
@@ -122,15 +124,15 @@ if_browser()
 	unsigned int base_addr;
 	int sd, int_cnt, int_cpu;
 	char *ifrname;
-	stats_t s;
+	stats_t *s;
 
 	if ((sd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
 		fatal("socket()");
-
-	while (ifrname = get_ifname())
+	
+	while (ifrname = get_ifname_new())
 	{
                 /* reset Graphics Rendition */
-                printf("\e[0m");
+                printf(SGR_reset);
 
 		strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
 		if (ioctl(sd, SIOCGIFFLAGS, &ifreq_io) < 0) {
@@ -165,7 +167,6 @@ if_browser()
                                 if ( ifru_flags & BIT(i) ) 
                                         printf(j++ == 0 ? "\n\t%s " : "%s ", if_flag[i-1]);
 				
-                        
                 }
 
                 /* SIOCGIFHWADDR */
@@ -246,18 +247,19 @@ af_inet_end:
 		/* stats */
 
 		s = get_stats(ifreq_io.ifr_name);
-		printf("\tRX packets:%lu errors:%lu dropped:%lu overruns:%lu frame:%lu\n"
+		if (s != NULL)
+		printf("\tRx packets:%lu errors:%lu dropped:%lu overruns:%lu frame:%lu\n"
 		       "\tTx packets:%lu errors:%lu dropped:%lu overruns:%lu carrier:%lu\n",
-			s.rx_packets,
-			s.rx_errs,
-			s.rx_drop,
-			s.rx_fifo,
-			s.rx_frame,
-			s.tx_packets,
- 			s.tx_errs,
-                        s.tx_drop,
-                        s.tx_fifo,
-                        s.tx_colls);
+			s->rx_packets,
+			s->rx_errs,
+			s->rx_drop,
+			s->rx_fifo,
+			s->rx_frame,
+			s->tx_packets,
+ 			s->tx_errs,
+                        s->tx_drop,
+                        s->tx_fifo,
+                        s->tx_colls);
 		
 		/* print ethernet_info */
 		info=ethernet_info(ifrname);
@@ -278,7 +280,7 @@ __dead void
 the_function_after()
 {
   	/* reset Graphics Rendition */
-        printf("\e[0m");
+        printf(SGR_reset);
 	exit(0);
 }
 

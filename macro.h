@@ -29,6 +29,10 @@
 #define __INTERNAL__    "%d:%s() internal error",\
                         __LINE__,__FUNCTION__
 
+// Set Graphics Rendition
+#define SGR_reset	"\e[0m"
+#define SGR_bold	"\e[0;1m"
+
 #define BIT(i)  	(1<<(i-1))
 #define PROC_NET_DEV 	"/proc/net/dev"
 #define PROC_INTERRUPT  "/proc/interrupts"
