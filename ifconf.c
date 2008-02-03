@@ -25,6 +25,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <netinet/ether.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -117,161 +118,162 @@ const char *if_flag[]= {
 void
 if_browser()
 {
-	struct ifreq ifreq_io;
-	struct ifconf ifc;
-	struct ethtool_drvinfo *info;
-	short int ifru_flags;
-	unsigned int base_addr;
-	int sd, int_cnt, int_cpu;
-	char *ifrname;
-	stats_t *s;
+    struct ifreq ifreq_io;
+    struct ifconf ifc;
+    struct ethtool_drvinfo *info;
+    short int ifru_flags;
+    unsigned int base_addr;
+    int sd, int_cnt, int_cpu;
+    char *ifrname;
+    stats_t *s;
 
-	if ((sd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
-		fatal("socket()");
-	
-	while (ifrname = get_ifname_new())
-	{
-                /* reset Graphics Rendition */
-                printf(SGR_reset);
+    if ((sd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+        fatal("socket()");
 
-		strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
-		if (ioctl(sd, SIOCGIFFLAGS, &ifreq_io) < 0) {
-			continue;
-		}
+    while (ifrname = get_ifname_new())
+    {
+        /* reset Graphics Rendition */
+        printf(SGR_reset);
 
-		/* save flags */
-		ifru_flags= ifreq_io.ifr_flags;
+        strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
+        if (ioctl(sd, SIOCGIFFLAGS, &ifreq_io) < 0) {
+            continue;
+        }
 
-		/* filters: IFF_UP */
-		if ( !options.all && (ifreq_io.ifr_flags & IFF_UP) == 0)
-			continue;
+        /* save flags */
+        ifru_flags= ifreq_io.ifr_flags;
 
-		/* print interface name */
-		printf("%s\t",ifrname);
+        /* filters: IFF_UP */
+        if ( !options.all && (ifreq_io.ifr_flags & IFF_UP) == 0)
+            continue;
 
-		/* mii test link */
-		mii_testlink(ifrname);
+        /* print interface name */
+        printf("%s\t",ifrname);
 
-		/* SIOCGIFHWADDR */
-       		strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ); 
-	        if (ioctl(sd, SIOCGIFHWADDR, &ifreq_io) != -1 ) {
-			struct ether_addr *eth_addr;
-                	eth_addr = (struct ether_addr *) & ifreq_io.ifr_addr.sa_data;
-                	printf("HWaddr %s ", ether_ntoa(eth_addr));
-                }
+        /* mii test link */
+        mii_testlink(ifrname);
 
-                /* FLAG */
-                {
-                        int i,j=0;
-                        for (i=1;i<16;i++) 
-                                if ( ifru_flags & BIT(i) ) 
-                                        printf(j++ == 0 ? "\n\t%s " : "%s ", if_flag[i-1]);
-				
-                }
+        /* SIOCGIFHWADDR */
+        strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ); 
+        if (ioctl(sd, SIOCGIFHWADDR, &ifreq_io) != -1 ) {
+            struct ether_addr *eth_addr = (struct ether_addr *) & ifreq_io.ifr_addr.sa_data;
+            char *hw = ether_ntoa(eth_addr);
+            if (hw) 
+                printf("HWaddr %s ", ether_ntoa(eth_addr));
+        }
 
-                /* SIOCGIFHWADDR */
-                strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
-                if (ioctl(sd, SIOCGIFMTU, &ifreq_io) != -1 ) {
-                        printf("MTU:%d ", ifreq_io.ifr_mtu);
-                }
+        /* FLAG */
+        {
+            int i,j=0;
+            for (i=1;i<16;i++) 
+                if ( ifru_flags & BIT(i) ) 
+                    printf(j++ == 0 ? "\n\t%s " : "%s ", if_flag[i-1]);
 
-                /* SIOCGIFMETRIC */
-                strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
-                if (ioctl(sd, SIOCGIFMETRIC, &ifreq_io) != -1 ) {
-                        printf("metric:%d ", ifreq_io.ifr_metric ? ifreq_io.ifr_metric : 1);
-                }
+        }
 
-		printf("\n");
+        /* SIOCGIFHWADDR */
+        strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
+        if (ioctl(sd, SIOCGIFMTU, &ifreq_io) != -1 ) {
+            printf("MTU:%d ", ifreq_io.ifr_mtu);
+        }
 
-                /* SIOCGIFADDR */
-                strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
-                if (ioctl(sd, SIOCGIFADDR, &ifreq_io) != -1 ) {
-			struct sockaddr_in *p;
-			p = (struct sockaddr_in *)&ifreq_io.ifr_addr;
-			
-			if(ifreq_io.ifr_addr.sa_family == AF_INET) {
-				printf("\tinet addr:%s ", inet_ntoa(p->sin_addr));	
-			}
-			else
-				goto af_inet_end;
-                }
-		else
-			goto af_inet_end;
+        /* SIOCGIFMETRIC */
+        strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
+        if (ioctl(sd, SIOCGIFMETRIC, &ifreq_io) != -1 ) {
+            printf("metric:%d ", ifreq_io.ifr_metric ? ifreq_io.ifr_metric : 1);
+        }
 
-	
-		/* SIOCGIFBRDADDR */
-		strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
-                if (ioctl(sd, SIOCGIFBRDADDR, &ifreq_io) != -1) {
-			struct sockaddr_in *p;
-			p = (struct sockaddr_in *)&ifreq_io.ifr_addr;
-			printf("bcast:%s ", inet_ntoa(p->sin_addr));
-			fflush(stdout);
-                } 
+        printf("\n");
 
-		/* SIOCGIFNETMASK */
-		strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
-		if (ioctl(sd, SIOCGIFNETMASK, &ifreq_io) != -1) {
-			struct sockaddr_in *p;
-			p = (struct sockaddr_in *)&ifreq_io.ifr_addr;
-			printf("mask:%s", inet_ntoa(p->sin_addr));
-			fflush(stdout);
-		}
+        /* SIOCGIFADDR */
+        strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
+        if (ioctl(sd, SIOCGIFADDR, &ifreq_io) != -1 ) {
+            struct sockaddr_in *p;
+            p = (struct sockaddr_in *)&ifreq_io.ifr_addr;
 
-		printf("\n");
+            if(ifreq_io.ifr_addr.sa_family == AF_INET) {
+                printf("\tinet addr:%s ", inet_ntoa(p->sin_addr));	
+            }
+            else
+                goto af_inet_end;
+        }
+        else
+            goto af_inet_end;
+
+
+        /* SIOCGIFBRDADDR */
+        strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
+        if (ioctl(sd, SIOCGIFBRDADDR, &ifreq_io) != -1) {
+            struct sockaddr_in *p;
+            p = (struct sockaddr_in *)&ifreq_io.ifr_addr;
+            printf("bcast:%s ", inet_ntoa(p->sin_addr));
+            fflush(stdout);
+        } 
+
+        /* SIOCGIFNETMASK */
+        strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
+        if (ioctl(sd, SIOCGIFNETMASK, &ifreq_io) != -1) {
+            struct sockaddr_in *p;
+            p = (struct sockaddr_in *)&ifreq_io.ifr_addr;
+            printf("mask:%s", inet_ntoa(p->sin_addr));
+            fflush(stdout);
+        }
+
+        printf("\n");
 af_inet_end:
-	
-		inet6_print_addr(ifrname);
-	
-		/* SIOCGIFMAP */
-		strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
-                if (ioctl(sd, SIOCGIFMAP, &ifreq_io) != -1) {
-			base_addr = ifreq_io.ifr_ifru.ifru_map.base_addr;
-                }
-		else
-			base_addr = 0xffff;
 
-		int_cnt = get_interrupt_counter((unsigned int)ifreq_io.ifr_ifru.ifru_map.irq, &int_cpu);
+        inet6_print_addr(ifrname);
 
-		printf( ifreq_io.ifr_ifru.ifru_map.mem_start ? 
-			"\tbase_addr:%1$x memory:%2$x-%3$x irq:%4$d #cpu0=%5$d dma:%6$d port:%7$d\n " : 
-			"\tbase_addr:%1$x irq:%4$d #cpu%8$d=%5$d dma:%6$d port:%7$d\n " ,
-			(unsigned int)ifreq_io.ifr_ifru.ifru_map.base_addr,
-			(unsigned int)ifreq_io.ifr_ifru.ifru_map.mem_start,
-			(unsigned int)ifreq_io.ifr_ifru.ifru_map.mem_end,
-			(unsigned int)ifreq_io.ifr_ifru.ifru_map.irq,
-			(unsigned int)int_cnt,
-			(unsigned int)ifreq_io.ifr_ifru.ifru_map.dma,
-			(unsigned int)ifreq_io.ifr_ifru.ifru_map.port,
-			(unsigned int)int_cpu);	
+        /* SIOCGIFMAP */
+        strncpy(ifreq_io.ifr_name, ifrname,IFNAMSIZ);
+        if (ioctl(sd, SIOCGIFMAP, &ifreq_io) != -1) {
+            base_addr = ifreq_io.ifr_ifru.ifru_map.base_addr;
+        }
+        else
+            base_addr = 0xffff;
 
-		/* stats */
+        int_cnt = get_interrupt_counter((unsigned int)ifreq_io.ifr_ifru.ifru_map.irq, &int_cpu);
 
-		s = get_stats(ifreq_io.ifr_name);
-		if (s != NULL)
-		printf("\tRx packets:%lu errors:%lu dropped:%lu overruns:%lu frame:%lu\n"
-		       "\tTx packets:%lu errors:%lu dropped:%lu overruns:%lu carrier:%lu\n",
-			s->rx_packets,
-			s->rx_errs,
-			s->rx_drop,
-			s->rx_fifo,
-			s->rx_frame,
-			s->tx_packets,
- 			s->tx_errs,
-                        s->tx_drop,
-                        s->tx_fifo,
-                        s->tx_colls);
-		
-		/* print ethernet_info */
-		info=ethernet_info(ifrname);
-		if (info != NULL)
-			printf("\tether_driver:%s version:%s\n", info->driver, info->version);
+        printf( ifreq_io.ifr_ifru.ifru_map.mem_start ? 
+                "\tbase_addr:%1$x memory:%2$x-%3$x irq:%4$d #cpu0=%5$d dma:%6$d port:%7$d\n " : 
+                "\tbase_addr:%1$x irq:%4$d #cpu%8$d=%5$d dma:%6$d port:%7$d\n " ,
+                (unsigned int)ifreq_io.ifr_ifru.ifru_map.base_addr,
+                (unsigned int)ifreq_io.ifr_ifru.ifru_map.mem_start,
+                (unsigned int)ifreq_io.ifr_ifru.ifru_map.mem_end,
+                (unsigned int)ifreq_io.ifr_ifru.ifru_map.irq,
+                (unsigned int)int_cnt,
+                (unsigned int)ifreq_io.ifr_ifru.ifru_map.dma,
+                (unsigned int)ifreq_io.ifr_ifru.ifru_map.port,
+                (unsigned int)int_cpu);	
 
-		putchar('\n');
-	}
+        /* stats */
+
+        s = get_stats(ifreq_io.ifr_name);
+        if (s != NULL)
+            printf("\tRx packets:%lu errors:%lu dropped:%lu overruns:%lu frame:%lu\n"
+                   "\tTx packets:%lu errors:%lu dropped:%lu overruns:%lu carrier:%lu\n",
+                   s->rx_packets,
+                   s->rx_errs,
+                   s->rx_drop,
+                   s->rx_fifo,
+                   s->rx_frame,
+                   s->tx_packets,
+                   s->tx_errs,
+                   s->tx_drop,
+                   s->tx_fifo,
+                   s->tx_colls);
+
+        /* print ethernet_info */
+        info=ethernet_info(ifrname);
+        if (info != NULL)
+            printf("\tether_driver:%s version:%s\n", info->driver, info->version);
+
+        putchar('\n');
+    }
 
 
-	close(sd);
-	return;
+    close(sd);
+    return;
 }
 
 
@@ -279,37 +281,37 @@ __dead void the_function_after() __attribute__((destructor));
 __dead void
 the_function_after()
 {
-  	/* reset Graphics Rendition */
-        printf(SGR_reset);
-	exit(0);
+    /* reset Graphics Rendition */
+    printf(SGR_reset);
+    exit(0);
 }
 
 
 int
 main(argc,argv)
-	int argc;
-	char **argv;
+int argc;
+char **argv;
 {
-	int i;
+    int i;
 
-	while ((i = getopt_long(argc, argv, "hva", long_options, 0)) != EOF)
-                switch (i) {
-                        case 'h':
-                                usage();
-                        case 'v':
-			        fprintf(stderr, "%s\n\nifconf %s\n", license, VERSION);
-                        	exit(0);
-                        case 'a':
-				options.all=1 ;
-				break;
-                        case '?': fatal(__INTERNAL__);
+    while ((i = getopt_long(argc, argv, "hva", long_options, 0)) != EOF)
+        switch (i) {
+        case 'h':
+            usage();
+        case 'v':
+            fprintf(stderr, "%s\n\nifconf %s\n", license, VERSION);
+            exit(0);
+        case 'a':
+            options.all=1 ;
+            break;
+        case '?': fatal(__INTERNAL__);
         }
 
-	argc -= optind;
-	argv += optind;
+    argc -= optind;
+    argv += optind;
 
-	signal(SIGINT,exit);	
-	if_browser();
+    signal(SIGINT,exit);	
+    if_browser();
 
-	return (0);
+    return (0);
 }

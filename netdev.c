@@ -51,7 +51,7 @@ ethernet_info(const char *ifname)
 	static struct ethtool_drvinfo *info;
 	struct ifreq ifr;
 	int s;
-	u32 req = ETHTOOL_GDRVINFO;	/* netdev ethcmd */
+	uint32_t req = ETHTOOL_GDRVINFO;	/* netdev ethcmd */
 
 	s = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 	if (s == -1) {
